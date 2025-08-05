@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test CV Fixed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">
+            Test CV Generator - Fixed CSRF Issue
+        </h1>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Formulario -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Datos del CV</h2>
+                <form id="cvForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nombre completo</label>
+                        <input type="text" id="nombre" placeholder="Juan Pérez" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Experiencia laboral</label>
+                        <textarea id="experiencia" rows="3" placeholder="Describe tu experiencia laboral..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Educación</label>
+                        <textarea id="educacion" rows="3" placeholder="Describe tu formación académica..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Habilidades</label>
+                        <input type="text" id="habilidades" placeholder="JavaScript, React, Node.js" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
+                        Generar CV
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Resultado -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">CV Generado</h2>
+                <div id="result" class="bg-gray-50 p-4 rounded-md min-h-[400px]">
+                    <p class="text-gray-500 text-center">El CV aparecerá aquí después de generarlo</p>
+                </div>
+                <div id="loading" class="hidden text-center py-4">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p class="mt-2 text-gray-600">Generando CV...</p>
+                </div>
+                <div id="error" class="hidden text-center py-4">
+                    <p class="text-red-600" id="errorMessage"></p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Botón para ir a la aplicación principal -->
+        <div class="text-center mt-8">
+            <a href="http://localhost:5173" class="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 transition-colors inline-block">
+                Ir a la Aplicación Principal
+            </a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('cvForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                nombre: document.getElementById('nombre').value,
+                experiencia: document.getElementById('experiencia').value,
+                educacion: document.getElementById('educacion').value,
+                habilidades: document.getElementById('habilidades').value
+            };
+            
+            // Mostrar loading y ocultar error
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('error').classList.add('hidden');
+            document.getElementById('result').innerHTML = '';
+            
+            try {
+                console.log('Enviando datos:', formData);
+                
+                // Usar fetch directamente sin CSRF para esta ruta específica
+                const response = await fetch('http://localhost:8000/api/generar-cv', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                console.log('Respuesta recibida:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Datos recibidos:', data);
+                
+                if (data.success) {
+                    document.getElementById('result').innerHTML = `
+                        <pre class="whitespace-pre-wrap text-sm text-gray-800 font-mono">${data.cv}</pre>
+                    `;
+                } else {
+                    throw new Error(data.message || 'Error desconocido');
+                }
+            } catch (error) {
+                console.error('Error completo:', error);
+                document.getElementById('errorMessage').textContent = `Error: ${error.message}`;
+                document.getElementById('error').classList.remove('hidden');
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html> 

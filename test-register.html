@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Register Laravel</title>
+</head>
+<body>
+    <h1>Test Register Laravel</h1>
+    <form id="registerForm">
+        <input type="text" id="name" placeholder="Nombre" value="Test User" required><br>
+        <input type="email" id="email" placeholder="Email" value="test3@example.com" required><br>
+        <input type="password" id="password" placeholder="Contraseña" value="password123" required><br>
+        <input type="password" id="password_confirmation" placeholder="Confirmar contraseña" value="password123" required><br>
+        <input type="text" id="cargo_deseado" placeholder="Cargo deseado" value="Desarrollador"><br>
+        <textarea id="experiencia_laboral" placeholder="Experiencia laboral">2 años</textarea><br>
+        <textarea id="educacion" placeholder="Educación">Ingeniería</textarea><br>
+        <input type="text" id="habilidades" placeholder="Habilidades" value="PHP, Laravel"><br>
+        <input type="text" id="idiomas" placeholder="Idiomas" value="Español, Inglés"><br>
+        <button type="submit">Registrar</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                password_confirmation: document.getElementById('password_confirmation').value,
+                cargo_deseado: document.getElementById('cargo_deseado').value,
+                experiencia_laboral: document.getElementById('experiencia_laboral').value,
+                educacion: document.getElementById('educacion').value,
+                habilidades: document.getElementById('habilidades').value,
+                idiomas: document.getElementById('idiomas').value,
+            };
+            
+            console.log('Datos del formulario:', formData);
+            
+            try {
+                // Primero obtener CSRF token
+                console.log('Obteniendo CSRF token...');
+                const csrfResponse = await fetch(`${API_BASE}/sanctum/csrf-cookie`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                console.log('CSRF Response status:', csrfResponse.status);
+                console.log('CSRF Response headers:', Object.fromEntries(csrfResponse.headers.entries()));
+                
+                // Luego hacer el registro
+                console.log('Haciendo registro...');
+                const response = await fetch(`${API_BASE}/register`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                console.log('Register Response status:', response.status);
+                console.log('Register Response headers:', Object.fromEntries(response.headers.entries()));
+                
+                const data = await response.text();
+                console.log('Register Response data:', data);
+                
+                document.getElementById('result').innerHTML = `
+                    <h3>Register Test Result:</h3>
+                    <p>Status: ${response.status}</p>
+                    <p>Data: ${data}</p>
+                    <p>Success: ${response.ok}</p>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html> 
