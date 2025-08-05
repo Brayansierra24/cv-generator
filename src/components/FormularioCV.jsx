@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
+import SugerenciasIA from './SugerenciasIA';
 
-export default function FormularioCV({ onSubmit, cargando = false }) {
+export default function FormularioCVElegante({ onSubmit, cargando = false }) {
   const [datos, setDatos] = useState({
     nombre: '',
     experiencia: '',
@@ -10,469 +11,337 @@ export default function FormularioCV({ onSubmit, cargando = false }) {
 
   const [errores, setErrores] = useState({});
   const [camposTocados, setCamposTocados] = useState({});
-  const [formularioValido, setFormularioValido] = useState(false);
 
-  // Validaciones individuales por campo
-  const validarCampo = (nombre, valor) => {
+  // Validación optimizada
+  const validarCampo = useCallback((nombre, valor) => {
     const valorLimpio = valor.trim();
     
     switch (nombre) {
       case 'nombre':
         if (!valorLimpio) return 'El nombre es requerido';
-        if (valorLimpio.length < 2) return 'El nombre debe tener al menos 2 caracteres';
-        if (valorLimpio.length > 100) return 'El nombre no puede exceder 100 caracteres';
+        if (valorLimpio.length < 2) return 'Mínimo 2 caracteres';
+        if (valorLimpio.length > 100) return 'Máximo 100 caracteres';
         return '';
-        
       case 'experiencia':
-        if (!valorLimpio) return 'La experiencia laboral es requerida';
-        if (valorLimpio.length < 10) return 'Describe tu experiencia con más detalle (mínimo 10 caracteres)';
-        if (valorLimpio.length > 1000) return 'La descripción es muy larga (máximo 1000 caracteres)';
+        if (!valorLimpio) return 'La experiencia es requerida';
+        if (valorLimpio.length < 10) return 'Mínimo 10 caracteres';
+        if (valorLimpio.length > 1000) return 'Máximo 1000 caracteres';
         return '';
-        
       case 'educacion':
         if (!valorLimpio) return 'La educación es requerida';
-        if (valorLimpio.length < 5) return 'Describe tu educación con más detalle (mínimo 5 caracteres)';
-        if (valorLimpio.length > 800) return 'La descripción es muy larga (máximo 800 caracteres)';
+        if (valorLimpio.length < 5) return 'Mínimo 5 caracteres';
+        if (valorLimpio.length > 800) return 'Máximo 800 caracteres';
         return '';
-        
       case 'habilidades':
         if (!valorLimpio) return 'Las habilidades son requeridas';
-        if (valorLimpio.length < 5) return 'Lista al menos algunas habilidades (mínimo 5 caracteres)';
-        if (valorLimpio.length > 500) return 'La lista es muy larga (máximo 500 caracteres)';
+        if (valorLimpio.length < 5) return 'Mínimo 5 caracteres';
+        if (valorLimpio.length > 500) return 'Máximo 500 caracteres';
         return '';
-        
       default:
         return '';
     }
-  };
+  }, []);
 
-  const handleChange = e => {
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
-    const nuevosDatos = { ...datos, [name]: value };
-    setDatos(nuevosDatos);
-    
-    // Marcar el campo como tocado
-    setCamposTocados({ ...camposTocados, [name]: true });
-    
-    // Validar el campo en tiempo real solo si ya fue tocado
-    if (camposTocados[name] || value.trim() !== '') {
-      const error = validarCampo(name, value);
-      setErrores({ ...errores, [name]: error });
-    }
-  };
+    setDatos(prev => ({ ...prev, [name]: value }));
+    setCamposTocados(prev => ({ ...prev, [name]: true }));
+    setErrores(prev => ({ ...prev, [name]: validarCampo(name, value) }));
+  }, [validarCampo]);
 
-  const handleBlur = e => {
+  const handleBlur = useCallback((e) => {
     const { name, value } = e.target;
-    // Marcar como tocado y validar al perder el foco
-    setCamposTocados({ ...camposTocados, [name]: true });
-    const error = validarCampo(name, value);
-    setErrores({ ...errores, [name]: error });
-  };
+    setCamposTocados(prev => ({ ...prev, [name]: true }));
+    setErrores(prev => ({ ...prev, [name]: validarCampo(name, value) }));
+  }, [validarCampo]);
 
-  // Efecto para validar el formulario completo en tiempo real
-  useEffect(() => {
-    const validarFormularioCompleto = () => {
-      const campos = ['nombre', 'experiencia', 'educacion', 'habilidades'];
-      const erroresActuales = {};
-      
-      campos.forEach(campo => {
-        const error = validarCampo(campo, datos[campo]);
-        if (error) {
-          erroresActuales[campo] = error;
-        }
-      });
-      
-      // Solo actualizar errores si el campo ha sido tocado
-      const erroresFiltrados = {};
-      Object.keys(erroresActuales).forEach(campo => {
-        if (camposTocados[campo]) {
-          erroresFiltrados[campo] = erroresActuales[campo];
-        }
-      });
-      
-      // Verificar si el formulario es válido
-      const formularioCompleto = campos.every(campo => datos[campo].trim() !== '');
-      const sinErrores = Object.keys(erroresActuales).length === 0;
-      
-      setFormularioValido(formularioCompleto && sinErrores);
-    };
-    
-    validarFormularioCompleto();
-  }, [datos, camposTocados]);
+  const formularioValido = useMemo(() => {
+    const campos = ['nombre', 'experiencia', 'educacion', 'habilidades'];
+    return campos.every(campo => datos[campo].trim() && !validarCampo(campo, datos[campo]));
+  }, [datos, validarCampo]);
 
-  const validarFormulario = () => {
-    // Marcar todos los campos como tocados para mostrar errores
-    const todosTocados = {
-      nombre: true,
-      experiencia: true,
-      educacion: true,
-      habilidades: true,
-    };
-    setCamposTocados(todosTocados);
+  const progresoFormulario = useMemo(() => {
+    const completados = Object.values(datos).filter(v => v.trim()).length;
+    return { completados, total: 4, porcentaje: (completados / 4) * 100 };
+  }, [datos]);
+
+  const handleAplicarSugerencias = useCallback((nuevasDatos) => {
+    setDatos(prev => ({ ...prev, ...nuevasDatos }));
+    const nuevosTocados = { ...camposTocados };
+    const nuevosErrores = { ...errores };
     
-    // Validar todos los campos
-    const nuevosErrores = {};
-    Object.keys(datos).forEach(campo => {
-      const error = validarCampo(campo, datos[campo]);
-      if (error) {
-        nuevosErrores[campo] = error;
+    Object.keys(nuevasDatos).forEach(campo => {
+      if (nuevasDatos[campo]?.trim()) {
+        nuevosTocados[campo] = true;
+        nuevosErrores[campo] = validarCampo(campo, nuevasDatos[campo]);
       }
     });
     
+    setCamposTocados(nuevosTocados);
     setErrores(nuevosErrores);
-    return Object.keys(nuevosErrores).length === 0;
-  };
+  }, [camposTocados, errores, validarCampo]);
 
-  const handleSubmit = e => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
+    if (formularioValido) await onSubmit(datos);
+  }, [datos, onSubmit, formularioValido]);
+
+  // Componente de campo elegante
+  const CampoElegante = ({ id, name, label, placeholder, maxLength, type = "text", rows, icon }) => {
+    const isTextarea = type === "textarea";
+    const Component = isTextarea ? "textarea" : "input";
+    const hasError = errores[name];
+    const isTouched = camposTocados[name];
+    const isValid = isTouched && !hasError && datos[name].trim();
     
-    if (validarFormulario()) {
-      onSubmit(datos);
-    }
+    return (
+      <div className="group">
+        <label htmlFor={id} className="flex items-center text-sm font-semibold text-slate-700 mb-3 transition-colors group-focus-within:text-indigo-600">
+          {icon && <span className="mr-2 text-slate-500 group-focus-within:text-indigo-500 transition-colors">{icon}</span>}
+          {label} <span className="text-red-500 ml-1">*</span>
+        </label>
+        
+        <div className="relative">
+          <Component
+            id={id}
+            name={name}
+            value={datos[name]}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder={placeholder}
+            rows={rows}
+            maxLength={maxLength}
+            className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-300 text-slate-800 placeholder-slate-400 bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-4 hover:bg-white/90 hover:shadow-md ${
+              isTextarea ? 'resize-none min-h-[120px]' : 'h-12'
+            } ${
+              hasError 
+                ? 'border-red-400 bg-red-50/50 focus:border-red-500 focus:ring-red-500/20' 
+                : isValid
+                ? 'border-emerald-400 bg-emerald-50/30 focus:border-emerald-500 focus:ring-emerald-500/20'
+                : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500/20'
+            }`}
+          />
+          
+          <div className="absolute top-3 right-3 flex items-center space-x-2">
+            {isTextarea && (
+              <div className={`text-xs px-2 py-1 rounded-full ${
+                datos[name].length > maxLength * 0.8 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
+              }`}>
+                {datos[name].length}/{maxLength}
+              </div>
+            )}
+            
+            {isTouched && (
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                hasError ? 'bg-red-100 text-red-600' : isValid ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
+              }`}>
+                {hasError ? (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                ) : isValid ? (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {hasError && (
+          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg animate-slideIn">
+            <div className="flex items-start">
+              <svg className="w-4 h-4 text-red-500 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span className="text-red-700 text-sm font-medium">{hasError}</span>
+            </div>
+          </div>
+        )}
+        
+        {isValid && (
+          <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg animate-slideIn">
+            <div className="flex items-center">
+              <svg className="w-4 h-4 text-emerald-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span className="text-emerald-700 text-sm font-medium">¡Perfecto!</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="card">
-        <header className="card-header">
-          <h1 className="font-display text-2xl font-bold text-gray-900" id="form-title">
-            Información del Currículum
-          </h1>
-          <p className="text-gray-600 mt-2" id="form-description">
-            Completa los siguientes campos para generar tu CV profesional. Todos los campos marcados con asterisco (*) son obligatorios.
-          </p>
-        </header>
-        
-        <form 
-          onSubmit={handleSubmit} 
-          className="card-body"
-          aria-labelledby="form-title"
-          aria-describedby="form-description"
-          noValidate
-        >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Columna izquierda */}
-            <div className="space-y-6">
-              <div>
-                <label 
-                  htmlFor="nombre-input" 
-                  className="block text-sm font-semibold text-gray-700 mb-3"
-                >
-                  Nombre completo *
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    id="nombre-input"
-                    name="nombre"
-                    value={datos.nombre}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Ej: Juan Pérez García"
-                    required
-                    aria-required="true"
-                    aria-invalid={errores.nombre ? 'true' : 'false'}
-                    aria-describedby={`nombre-help ${errores.nombre ? 'nombre-error' : ''}`}
-                    maxLength={100}
-                    className={`${
-                      errores.nombre 
-                        ? 'input-field-error' 
-                        : camposTocados.nombre && !errores.nombre && datos.nombre.trim()
-                        ? 'input-field border-green-300 focus:ring-green-500'
-                        : 'input-field'
-                    }`}
-                  />
-                  {/* Indicador de estado */}
-                  {camposTocados.nombre && !errores.nombre && datos.nombre.trim() && (
-                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center" aria-hidden="true">
-                      <svg className="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <div id="nombre-help" className="sr-only">
-                  Campo obligatorio. Ingresa tu nombre completo. Máximo 100 caracteres.
-                </div>
-                {errores.nombre && (
-                  <p id="nombre-error" className="text-red-600 text-sm mt-2 flex items-center" role="alert" aria-live="polite">
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    {errores.nombre}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label 
-                  htmlFor="experiencia-input" 
-                  className="block text-sm font-semibold text-gray-700 mb-3"
-                >
-                  Experiencia laboral *
-                </label>
-                <div className="relative">
-                  <textarea
-                    id="experiencia-input"
-                    name="experiencia"
-                    value={datos.experiencia}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Describe tu experiencia profesional, cargos anteriores, responsabilidades principales..."
-                    rows="6"
-                    required
-                    aria-required="true"
-                    aria-invalid={errores.experiencia ? 'true' : 'false'}
-                    aria-describedby={`experiencia-help experiencia-counter ${errores.experiencia ? 'experiencia-error' : ''}`}
-                    maxLength={1000}
-                    className={`${
-                      errores.experiencia 
-                        ? 'input-field-error resize-none' 
-                        : camposTocados.experiencia && !errores.experiencia && datos.experiencia.trim()
-                        ? 'input-field resize-none border-green-300 focus:ring-green-500'
-                        : 'input-field resize-none'
-                    }`}
-                  />
-                  {/* Contador de caracteres */}
-                  <div 
-                    id="experiencia-counter" 
-                    className="absolute bottom-2 right-2 text-xs text-gray-400"
-                    aria-live="polite"
-                  >
-                    {datos.experiencia.length} de 1000 caracteres
-                  </div>
-                  {/* Indicador de estado */}
-                  {camposTocados.experiencia && !errores.experiencia && datos.experiencia.trim() && (
-                    <div className="absolute top-2 right-2" aria-hidden="true">
-                      <svg className="h-4 w-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <div id="experiencia-help" className="sr-only">
-                  Campo obligatorio. Describe tu experiencia laboral con detalle. Mínimo 10 caracteres, máximo 1000 caracteres.
-                </div>
-                {errores.experiencia && (
-                  <p id="experiencia-error" className="text-red-600 text-sm mt-2 flex items-center" role="alert" aria-live="polite">
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    {errores.experiencia}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Columna derecha */}
-            <div className="space-y-6">
-              <div>
-                <label 
-                  htmlFor="educacion-input" 
-                  className="block text-sm font-semibold text-gray-700 mb-3"
-                >
-                  Educación *
-                </label>
-                <div className="relative">
-                  <textarea
-                    id="educacion-input"
-                    name="educacion"
-                    value={datos.educacion}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Incluye tu formación académica, títulos, certificaciones, cursos relevantes..."
-                    rows="6"
-                    required
-                    aria-required="true"
-                    aria-invalid={errores.educacion ? 'true' : 'false'}
-                    aria-describedby={`educacion-help educacion-counter ${errores.educacion ? 'educacion-error' : ''}`}
-                    maxLength={800}
-                    className={`${
-                      errores.educacion 
-                        ? 'input-field-error resize-none' 
-                        : camposTocados.educacion && !errores.educacion && datos.educacion.trim()
-                        ? 'input-field resize-none border-green-300 focus:ring-green-500'
-                        : 'input-field resize-none'
-                    }`}
-                  />
-                  {/* Contador de caracteres */}
-                  <div 
-                    id="educacion-counter" 
-                    className="absolute bottom-2 right-2 text-xs text-gray-400"
-                    aria-live="polite"
-                  >
-                    {datos.educacion.length} de 800 caracteres
-                  </div>
-                  {/* Indicador de estado */}
-                  {camposTocados.educacion && !errores.educacion && datos.educacion.trim() && (
-                    <div className="absolute top-2 right-2" aria-hidden="true">
-                      <svg className="h-4 w-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <div id="educacion-help" className="sr-only">
-                  Campo obligatorio. Describe tu formación académica y certificaciones. Mínimo 10 caracteres, máximo 800 caracteres.
-                </div>
-                {errores.educacion && (
-                  <p id="educacion-error" className="text-red-600 text-sm mt-2 flex items-center" role="alert" aria-live="polite">
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    {errores.educacion}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label 
-                  htmlFor="habilidades-input" 
-                  className="block text-sm font-semibold text-gray-700 mb-3"
-                >
-                  Habilidades *
-                </label>
-                <div className="relative">
-                  <textarea
-                    id="habilidades-input"
-                    name="habilidades"
-                    value={datos.habilidades}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Lista tus habilidades técnicas, blandas, idiomas, herramientas que manejas..."
-                    rows="6"
-                    required
-                    aria-required="true"
-                    aria-invalid={errores.habilidades ? 'true' : 'false'}
-                    aria-describedby={`habilidades-help habilidades-counter ${errores.habilidades ? 'habilidades-error' : ''}`}
-                    maxLength={500}
-                    className={`${
-                      errores.habilidades 
-                        ? 'input-field-error resize-none' 
-                        : camposTocados.habilidades && !errores.habilidades && datos.habilidades.trim()
-                        ? 'input-field resize-none border-green-300 focus:ring-green-500'
-                        : 'input-field resize-none'
-                    }`}
-                  />
-                  {/* Contador de caracteres */}
-                  <div 
-                    id="habilidades-counter" 
-                    className="absolute bottom-2 right-2 text-xs text-gray-400"
-                    aria-live="polite"
-                  >
-                    {datos.habilidades.length} de 500 caracteres
-                  </div>
-                  {/* Indicador de estado */}
-                  {camposTocados.habilidades && !errores.habilidades && datos.habilidades.trim() && (
-                    <div className="absolute top-2 right-2" aria-hidden="true">
-                      <svg className="h-4 w-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <div id="habilidades-help" className="sr-only">
-                  Campo obligatorio. Lista tus habilidades profesionales y técnicas. Mínimo 5 caracteres, máximo 500 caracteres.
-                </div>
-                {errores.habilidades && (
-                  <p id="habilidades-error" className="text-red-600 text-sm mt-2 flex items-center" role="alert" aria-live="polite">
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    {errores.habilidades}
-                  </p>
-                )}
-              </div>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-8 px-4">
+      <div className="max-w-5xl mx-auto">
+        {/* Header elegante */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl mb-6 shadow-xl">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
           </div>
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-slate-800 via-indigo-800 to-purple-800 bg-clip-text text-transparent mb-4">
+            Crea tu CV Profesional
+          </h1>
+          <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
+            Completa la información y genera un currículum impactante con ayuda de inteligencia artificial
+          </p>
+        </div>
 
-          {/* Botón de envío */}
-          <section className="mt-10 pt-6 border-t border-gray-200" aria-labelledby="submit-section">
-            <h2 id="submit-section" className="sr-only">Envío del formulario</h2>
-            
-            {/* Indicador de progreso del formulario */}
-            <div className="mb-6" role="region" aria-labelledby="progress-label">
-              <div className="flex justify-between items-center mb-2">
-                <span id="progress-label" className="text-sm font-medium text-gray-700">
-                  Progreso del formulario
-                </span>
-                <span className="text-sm text-gray-500" aria-live="polite">
-                  {Object.values(datos).filter(valor => valor.trim() !== '').length} de 4 campos completados
-                </span>
+        {/* Card principal con glassmorphism */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+          {/* Sugerencias de IA */}
+          <div className="p-8 border-b border-slate-200/50">
+            <SugerenciasIA 
+              onAplicarSugerencias={handleAplicarSugerencias}
+              datosActuales={datos}
+              disabled={cargando}
+            />
+          </div>
+          
+          {/* Formulario */}
+          <form onSubmit={handleSubmit} className="p-8" noValidate>
+            {/* Grid responsivo */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+              {/* Columna izquierda */}
+              <div className="space-y-8">
+                <CampoElegante
+                  id="nombre-input"
+                  name="nombre"
+                  label="Nombre completo"
+                  placeholder="Ej: Ana García López"
+                  maxLength={100}
+                  icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+                />
+                
+                <CampoElegante
+                  id="experiencia-input"
+                  name="experiencia"
+                  label="Experiencia laboral"
+                  placeholder="Describe tu experiencia profesional, logros destacados..."
+                  type="textarea"
+                  rows={6}
+                  maxLength={1000}
+                  icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6" /></svg>}
+                />
               </div>
-              <div 
-                className="w-full bg-gray-200 rounded-full h-2" 
-                role="progressbar" 
-                aria-valuenow={Object.values(datos).filter(valor => valor.trim() !== '').length}
-                aria-valuemin={0}
-                aria-valuemax={4}
-                aria-labelledby="progress-label"
-              >
-                <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    formularioValido ? 'bg-green-500' : 'bg-primary-500'
+
+              {/* Columna derecha */}
+              <div className="space-y-8">
+                <CampoElegante
+                  id="educacion-input"
+                  name="educacion"
+                  label="Educación"
+                  placeholder="Incluye tu formación académica, títulos, certificaciones..."
+                  type="textarea"
+                  rows={6}
+                  maxLength={800}
+                  icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>}
+                />
+                
+                <CampoElegante
+                  id="habilidades-input"
+                  name="habilidades"
+                  label="Habilidades"
+                  placeholder="Lista tus habilidades técnicas, blandas, idiomas..."
+                  type="textarea"
+                  rows={6}
+                  maxLength={500}
+                  icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>}
+                />
+              </div>
+            </div>
+
+            {/* Progreso y envío */}
+            <div className="mt-12 pt-8 border-t border-slate-200/50">
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-slate-700 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Progreso del formulario
+                  </h3>
+                  <span className="text-sm font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+                    {progresoFormulario.completados} de {progresoFormulario.total} completados
+                  </span>
+                </div>
+                
+                <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden shadow-inner">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-700 ease-out bg-gradient-to-r ${
+                      formularioValido ? 'from-emerald-500 to-green-500' : 'from-indigo-500 to-purple-500'
+                    }`}
+                    style={{ width: `${progresoFormulario.porcentaje}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="text-center">
+                <button
+                  type="submit"
+                  disabled={cargando || !formularioValido}
+                  className={`px-8 py-4 rounded-2xl font-semibold text-lg transition-all duration-300 transform ${
+                    cargando 
+                      ? 'bg-slate-400 text-white cursor-not-allowed scale-95' 
+                      : !formularioValido
+                      ? 'bg-slate-300 text-slate-500 cursor-not-allowed scale-95'
+                      : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:scale-105 hover:shadow-2xl active:scale-95'
                   }`}
-                  style={{
-                    width: `${(Object.values(datos).filter(valor => valor.trim() !== '').length / 4) * 100}%`
-                  }}
-                ></div>
+                >
+                  <span className="flex items-center justify-center">
+                    {cargando ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Generando tu CV profesional...
+                      </>
+                    ) : !formularioValido ? (
+                      <>
+                        <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        Completa todos los campos
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Generar CV con IA
+                      </>
+                    )}
+                  </span>
+                </button>
+                
+                <div className="mt-4">
+                  {formularioValido ? (
+                    <p className="text-emerald-600 font-medium flex items-center justify-center">
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      ¡Formulario listo! Haz clic para generar tu CV
+                    </p>
+                  ) : (
+                    <p className="text-slate-500">
+                      La generación puede tomar unos segundos mientras la IA procesa tu información
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-
-            <button
-              type="submit"
-              disabled={cargando || !formularioValido}
-              aria-describedby="submit-status"
-              aria-live="polite"
-              className={`w-full text-lg py-4 transition-all duration-200 ${
-                cargando 
-                  ? 'opacity-50 cursor-not-allowed btn-accent' 
-                  : !formularioValido
-                  ? 'opacity-60 cursor-not-allowed bg-gray-400 text-white rounded-xl font-medium'
-                  : 'btn-accent hover:scale-105'
-              }`}
-            >
-              {cargando ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Generando tu CV profesional...
-                </span>
-              ) : !formularioValido ? (
-                <span className="flex items-center justify-center">
-                  <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                  Completa todos los campos requeridos
-                </span>
-              ) : (
-                <span className="flex items-center justify-center">
-                  <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  Generar CV con IA
-                </span>
-              )}
-            </button>
-            
-            <div id="submit-status" className="mt-4 text-center" aria-live="polite">
-              {formularioValido ? (
-                <p className="text-sm text-green-600 flex items-center justify-center">
-                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  ¡Formulario listo! Haz clic para generar tu CV
-                </p>
-              ) : (
-                <p className="text-sm text-gray-500">
-                  La generación puede tomar unos segundos mientras la IA procesa tu información
-                </p>
-              )}
-            </div>
-          </section>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );
