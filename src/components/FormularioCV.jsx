@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
-import SugerenciasIA from './SugerenciasIA';
+import SugerenciasIAInteligente from './SugerenciasIAInteligente';
 import SelectorPlantillaCV from './SelectorPlantillaCV';
 import SeccionesOpcionalesCV from './SeccionesOpcionalesCV';
 import GeneradorPDFAvanzado from './GeneradorPDFAvanzado';
@@ -291,8 +291,10 @@ export default function FormularioCVElegante({ onSubmit, cargando = false }) {
   }, [datos, validarCampo]);
 
   const progresoFormulario = useMemo(() => {
-    const completados = Object.values(datos).filter(v => v.trim()).length;
-    return { completados, total: 4, porcentaje: (completados / 4) * 100 };
+    // Solo contar los campos legacy string, no objetos
+    const campos = ['nombre', 'experiencia', 'educacion', 'habilidades'];
+    const completados = campos.filter(campo => typeof datos[campo] === 'string' && datos[campo].trim()).length;
+    return { completados, total: campos.length, porcentaje: (completados / campos.length) * 100 };
   }, [datos]);
 
   const handleAplicarSugerencias = useCallback((nuevasDatos) => {
@@ -428,313 +430,101 @@ export default function FormularioCVElegante({ onSubmit, cargando = false }) {
 
         {/* Card principal con glassmorphism */}
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-          {/* Sugerencias de IA */}
+          {/* Sugerencias de IA Inteligente */}
           <div className="p-8 border-b border-slate-200/50">
-            <SugerenciasIA 
-              onAplicarSugerencias={handleAplicarSugerencias}
-              datosActuales={datos}
-              disabled={cargando}
+            <SugerenciasIAInteligente 
+              sugerencias={sugerenciasIA}
+              generandoIA={generandoIA}
+              onGenerarResumen={generarResumenProfesional}
+              onSugerirHabilidades={sugerirHabilidades}
+              onAplicarSugerencia={aplicarSugerenciaIA}
+              modoInteligente={modoInteligente}
+              onToggleModoInteligente={() => setModoInteligente(!modoInteligente)}
             />
           </div>
           
           {/* Formulario */}
           <form onSubmit={handleSubmit} className="p-8" noValidate>
             {/* Grid responsivo */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-              {/* Columna izquierda */}
-              <div className="space-y-8">
-                {/* Campo de Nombre - Diseño Premium */}
-                <div className="group relative">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
-                  <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl p-6 border border-white/20 shadow-xl">
-                    <label htmlFor="nombre-input" className="flex items-center text-sm font-bold text-slate-800 mb-4 group-focus-within:text-indigo-600 transition-colors">
-                      <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl mr-3 shadow-lg">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                      </div>
-                      <span className="text-lg">Nombre completo</span>
-                      <span className="text-red-500 ml-2 text-base">*</span>
-                    </label>
-                    
-                    <div className="relative">
-                      <input
-                        id="nombre-input"
-                        name="nombre"
-                        type="text"
-                        value={datos.nombre || ''}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        placeholder="Ej: Ana García López"
-                        maxLength={100}
-                        className={`w-full px-5 py-4 rounded-xl border-2 transition-all duration-500 text-slate-800 placeholder-slate-400 bg-gradient-to-r from-white/80 to-slate-50/80 backdrop-blur-sm focus:outline-none focus:ring-4 hover:shadow-lg transform hover:scale-[1.02] focus:scale-[1.02] h-14 text-lg font-medium ${
-                          errores.nombre 
-                            ? 'border-red-400 bg-gradient-to-r from-red-50/80 to-red-100/50 focus:border-red-500 focus:ring-red-500/30 shadow-red-200/50' 
-                            : (camposTocados.nombre && !errores.nombre && datos.nombre && datos.nombre.trim())
-                            ? 'border-emerald-400 bg-gradient-to-r from-emerald-50/80 to-green-50/50 focus:border-emerald-500 focus:ring-emerald-500/30 shadow-emerald-200/50'
-                            : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500/30 shadow-slate-200/30'
-                        }`}
-                      />
-                      
-                      {/* Contador de caracteres mejorado */}
-                      <div className={`absolute top-4 right-4 text-xs px-3 py-1.5 rounded-full font-semibold transition-all ${
-                        (datos.nombre || '').length > 80 ? 'bg-amber-100 text-amber-700 shadow-amber-200/50' : 'bg-slate-100/80 text-slate-600 shadow-slate-200/30'
-                      }`}>
-                        {(datos.nombre || '').length}/100
-                      </div>
-                    </div>
-                  
-                    {/* Mensaje de error mejorado */}
-                    {errores.nombre && (
-                      <div className="mt-4 p-4 bg-gradient-to-r from-red-50 to-red-100/50 border-l-4 border-red-400 rounded-xl shadow-lg animate-slideIn">
-                        <div className="flex items-start">
-                          <div className="p-1 bg-red-500 rounded-full mr-3">
-                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <span className="text-red-800 font-semibold text-sm">{errores.nombre}</span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Mensaje de éxito mejorado */}
-                    {camposTocados.nombre && !errores.nombre && datos.nombre && datos.nombre.trim() && (
-                      <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-green-100/50 border-l-4 border-emerald-400 rounded-xl shadow-lg animate-slideIn">
-                        <div className="flex items-center">
-                          <div className="p-1 bg-emerald-500 rounded-full mr-3">
-                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <span className="text-emerald-800 font-semibold text-sm">¡Perfecto! Nombre registrado correctamente</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Campo de Experiencia - Diseño Premium */}
-                <div className="group relative">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
-                  <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl p-6 border border-white/20 shadow-xl">
-                    <label htmlFor="experiencia-input" className="flex items-center text-sm font-bold text-slate-800 mb-4 group-focus-within:text-blue-600 transition-colors">
-                      <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl mr-3 shadow-lg">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6" />
-                        </svg>
-                      </div>
-                      <span className="text-lg">Experiencia laboral</span>
-                      <span className="text-red-500 ml-2 text-base">*</span>
-                    </label>
-                    
-                    <div className="relative">
-                      <textarea
-                        id="experiencia-input"
-                        name="experiencia"
-                        value={datos.experiencia || ''}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        placeholder="Describe tu experiencia profesional, logros destacados, responsabilidades, proyectos importantes..."
-                        rows={6}
-                        maxLength={1000}
-                        className={`w-full px-5 py-4 rounded-xl border-2 transition-all duration-500 text-slate-800 placeholder-slate-400 bg-gradient-to-r from-white/80 to-slate-50/80 backdrop-blur-sm focus:outline-none focus:ring-4 hover:shadow-lg transform hover:scale-[1.01] focus:scale-[1.01] resize-none min-h-[180px] text-base font-medium leading-relaxed ${
-                          errores.experiencia 
-                            ? 'border-red-400 bg-gradient-to-r from-red-50/80 to-red-100/50 focus:border-red-500 focus:ring-red-500/30 shadow-red-200/50' 
-                            : (camposTocados.experiencia && !errores.experiencia && datos.experiencia && datos.experiencia.trim())
-                            ? 'border-emerald-400 bg-gradient-to-r from-emerald-50/80 to-green-50/50 focus:border-emerald-500 focus:ring-emerald-500/30 shadow-emerald-200/50'
-                            : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/30 shadow-slate-200/30'
-                        }`}
-                      />
-                      
-                      {/* Contador de caracteres mejorado */}
-                      <div className={`absolute bottom-4 right-4 text-xs px-3 py-1.5 rounded-full font-semibold transition-all ${
-                        (datos.experiencia || '').length > 800 ? 'bg-amber-100 text-amber-700 shadow-amber-200/50' : 'bg-slate-100/80 text-slate-600 shadow-slate-200/30'
-                      }`}>
-                        {(datos.experiencia || '').length}/1000
-                      </div>
-                    </div>
-                  
-                    {/* Mensaje de error mejorado */}
-                    {errores.experiencia && (
-                      <div className="mt-4 p-4 bg-gradient-to-r from-red-50 to-red-100/50 border-l-4 border-red-400 rounded-xl shadow-lg animate-slideIn">
-                        <div className="flex items-start">
-                          <div className="p-1 bg-red-500 rounded-full mr-3">
-                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <span className="text-red-800 font-semibold text-sm">{errores.experiencia}</span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Mensaje de éxito mejorado */}
-                    {camposTocados.experiencia && !errores.experiencia && datos.experiencia && datos.experiencia.trim() && (
-                      <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-green-100/50 border-l-4 border-emerald-400 rounded-xl shadow-lg animate-slideIn">
-                        <div className="flex items-center">
-                          <div className="p-1 bg-emerald-500 rounded-full mr-3">
-                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <span className="text-emerald-800 font-semibold text-sm">¡Excelente! Experiencia registrada correctamente</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+            <div className="space-y-12">
+              {/* Bloque de Perfil */}
+              <div className="space-y-6">
+                <h2 className="text-xl font-bold text-slate-700 mb-2 border-l-4 border-indigo-400 pl-4 bg-indigo-50/50 rounded-lg py-1">Perfil</h2>
+                <DatosPersonalesModule
+                  datos={datos.datosPersonales}
+                  onCambiarDatos={handleCambiarDatosModulo}
+                  errores={errores}
+                  camposTocados={camposTocados}
+                  onCampoTocado={handleCampoTocado}
+                />
+                <FotoPerfilModule
+                  datos={datos}
+                  onCambiarDatos={handleCambiarDatosModulo}
+                  errores={errores}
+                  camposTocados={camposTocados}
+                  onCampoTocado={handleCampoTocado}
+                />
               </div>
-
-              {/* Columna derecha */}
-              <div className="space-y-8">
-                {/* Campo de Educación - Diseño Premium */}
-                <div className="group relative">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
-                  <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl p-6 border border-white/20 shadow-xl">
-                    <label htmlFor="educacion-input" className="flex items-center text-sm font-bold text-slate-800 mb-4 group-focus-within:text-emerald-600 transition-colors">
-                      <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl mr-3 shadow-lg">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-                        </svg>
-                      </div>
-                      <span className="text-lg">Educación</span>
-                      <span className="text-red-500 ml-2 text-base">*</span>
-                    </label>
-                    
-                    <div className="relative">
-                      <textarea
-                        id="educacion-input"
-                        name="educacion"
-                        value={datos.educacion || ''}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        placeholder="Incluye tu formación académica, títulos, certificaciones, cursos, especializaciones..."
-                        rows={6}
-                        maxLength={800}
-                        className={`w-full px-5 py-4 rounded-xl border-2 transition-all duration-500 text-slate-800 placeholder-slate-400 bg-gradient-to-r from-white/80 to-slate-50/80 backdrop-blur-sm focus:outline-none focus:ring-4 hover:shadow-lg transform hover:scale-[1.01] focus:scale-[1.01] resize-none min-h-[180px] text-base font-medium leading-relaxed ${
-                          errores.educacion 
-                            ? 'border-red-400 bg-gradient-to-r from-red-50/80 to-red-100/50 focus:border-red-500 focus:ring-red-500/30 shadow-red-200/50' 
-                            : (camposTocados.educacion && !errores.educacion && datos.educacion && datos.educacion.trim())
-                            ? 'border-emerald-400 bg-gradient-to-r from-emerald-50/80 to-green-50/50 focus:border-emerald-500 focus:ring-emerald-500/30 shadow-emerald-200/50'
-                            : 'border-slate-300 focus:border-emerald-500 focus:ring-emerald-500/30 shadow-slate-200/30'
-                        }`}
-                      />
-                      
-                      {/* Contador de caracteres mejorado */}
-                      <div className={`absolute bottom-4 right-4 text-xs px-3 py-1.5 rounded-full font-semibold transition-all ${
-                        (datos.educacion || '').length > 640 ? 'bg-amber-100 text-amber-700 shadow-amber-200/50' : 'bg-slate-100/80 text-slate-600 shadow-slate-200/30'
-                      }`}>
-                        {(datos.educacion || '').length}/800
-                      </div>
-                    </div>
-                  
-                    {/* Mensaje de error mejorado */}
-                    {errores.educacion && (
-                      <div className="mt-4 p-4 bg-gradient-to-r from-red-50 to-red-100/50 border-l-4 border-red-400 rounded-xl shadow-lg animate-slideIn">
-                        <div className="flex items-start">
-                          <div className="p-1 bg-red-500 rounded-full mr-3">
-                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <span className="text-red-800 font-semibold text-sm">{errores.educacion}</span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Mensaje de éxito mejorado */}
-                    {camposTocados.educacion && !errores.educacion && datos.educacion && datos.educacion.trim() && (
-                      <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-green-100/50 border-l-4 border-emerald-400 rounded-xl shadow-lg animate-slideIn">
-                        <div className="flex items-center">
-                          <div className="p-1 bg-emerald-500 rounded-full mr-3">
-                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <span className="text-emerald-800 font-semibold text-sm">¡Excelente! Educación registrada correctamente</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Campo de Habilidades - Diseño Premium */}
-                <div className="group relative">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-300"></div>
-                  <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl p-6 border border-white/20 shadow-xl">
-                    <label htmlFor="habilidades-input" className="flex items-center text-sm font-bold text-slate-800 mb-4 group-focus-within:text-amber-600 transition-colors">
-                      <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl mr-3 shadow-lg">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                        </svg>
-                      </div>
-                      <span className="text-lg">Habilidades</span>
-                      <span className="text-red-500 ml-2 text-base">*</span>
-                    </label>
-                    
-                    <div className="relative">
-                      <textarea
-                        id="habilidades-input"
-                        name="habilidades"
-                        value={datos.habilidades || ''}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        placeholder="Lista tus habilidades técnicas, blandas, idiomas, certificaciones, herramientas..."
-                        rows={6}
-                        maxLength={500}
-                        className={`w-full px-5 py-4 rounded-xl border-2 transition-all duration-500 text-slate-800 placeholder-slate-400 bg-gradient-to-r from-white/80 to-slate-50/80 backdrop-blur-sm focus:outline-none focus:ring-4 hover:shadow-lg transform hover:scale-[1.01] focus:scale-[1.01] resize-none min-h-[180px] text-base font-medium leading-relaxed ${
-                          errores.habilidades 
-                            ? 'border-red-400 bg-gradient-to-r from-red-50/80 to-red-100/50 focus:border-red-500 focus:ring-red-500/30 shadow-red-200/50' 
-                            : (camposTocados.habilidades && !errores.habilidades && datos.habilidades && datos.habilidades.trim())
-                            ? 'border-emerald-400 bg-gradient-to-r from-emerald-50/80 to-green-50/50 focus:border-emerald-500 focus:ring-emerald-500/30 shadow-emerald-200/50'
-                            : 'border-slate-300 focus:border-amber-500 focus:ring-amber-500/30 shadow-slate-200/30'
-                        }`}
-                      />
-                      
-                      {/* Contador de caracteres mejorado */}
-                      <div className={`absolute bottom-4 right-4 text-xs px-3 py-1.5 rounded-full font-semibold transition-all ${
-                        (datos.habilidades || '').length > 400 ? 'bg-amber-100 text-amber-700 shadow-amber-200/50' : 'bg-slate-100/80 text-slate-600 shadow-slate-200/30'
-                      }`}>
-                        {(datos.habilidades || '').length}/500
-                      </div>
-                    </div>
-                    
-                    {/* Mensaje de error mejorado */}
-                    {errores.habilidades && (
-                      <div className="mt-4 p-4 bg-gradient-to-r from-red-50 to-red-100/50 border-l-4 border-red-400 rounded-xl shadow-lg animate-slideIn">
-                        <div className="flex items-start">
-                          <div className="p-1 bg-red-500 rounded-full mr-3">
-                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <span className="text-red-800 font-semibold text-sm">{errores.habilidades}</span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Mensaje de éxito mejorado */}
-                    {camposTocados.habilidades && !errores.habilidades && datos.habilidades && datos.habilidades.trim() && (
-                      <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-green-100/50 border-l-4 border-emerald-400 rounded-xl shadow-lg animate-slideIn">
-                        <div className="flex items-center">
-                          <div className="p-1 bg-emerald-500 rounded-full mr-3">
-                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <span className="text-emerald-800 font-semibold text-sm">¡Excelente! Habilidades registradas correctamente</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+              {/* Educación */}
+              <div className="space-y-6">
+                <h2 className="text-xl font-bold text-slate-700 mb-2 border-l-4 border-emerald-400 pl-4 bg-emerald-50/50 rounded-lg py-1">Educación</h2>
+                <EducacionModule
+                  datos={datos.educacion}
+                  onCambiarDatos={handleCambiarDatosModulo}
+                  errores={errores}
+                  camposTocados={camposTocados}
+                  onCampoTocado={handleCampoTocado}
+                />
+              </div>
+              {/* Experiencia */}
+              <div className="space-y-6">
+                <h2 className="text-xl font-bold text-slate-700 mb-2 border-l-4 border-pink-400 pl-4 bg-pink-50/50 rounded-lg py-1">Experiencia</h2>
+                <ExperienciaModule
+                  datos={datos.experiencia}
+                  onCambiarDatos={handleCambiarDatosModulo}
+                  errores={errores}
+                  camposTocados={camposTocados}
+                  onCampoTocado={handleCampoTocado}
+                />
+              </div>
+              {/* Habilidades */}
+              <div className="space-y-6">
+                <h2 className="text-xl font-bold text-slate-700 mb-2 border-l-4 border-amber-400 pl-4 bg-amber-50/50 rounded-lg py-1">Habilidades</h2>
+                <HabilidadesModule
+                  datos={datos.habilidades}
+                  onCambiarDatos={handleCambiarDatosModulo}
+                  errores={errores}
+                  camposTocados={camposTocados}
+                  onCampoTocado={handleCampoTocado}
+                />
+              </div>
+              {/* Idiomas */}
+              <div className="space-y-6">
+                <h2 className="text-xl font-bold text-slate-700 mb-2 border-l-4 border-blue-400 pl-4 bg-blue-50/50 rounded-lg py-1">Idiomas</h2>
+                <IdiomasModule
+                  datos={datos.idiomas}
+                  onCambiarDatos={handleCambiarDatosModulo}
+                  errores={errores}
+                  camposTocados={camposTocados}
+                  onCampoTocado={handleCampoTocado}
+                />
+              </div>
+              {/* Proyectos */}
+              <div className="space-y-6">
+                <h2 className="text-xl font-bold text-slate-700 mb-2 border-l-4 border-purple-400 pl-4 bg-purple-50/50 rounded-lg py-1">Proyectos</h2>
+                <ProyectosModule
+                  datos={datos.proyectos}
+                  onCambiarDatos={handleCambiarDatosModulo}
+                  errores={errores}
+                  camposTocados={camposTocados}
+                  onCampoTocado={handleCampoTocado}
+                />
               </div>
             </div>
-            
+
             {/* Selector de Plantilla */}
-            <div className="mt-8">
+            <div className="mt-12">
+              <h2 className="text-xl font-bold text-slate-700 mb-4 border-l-4 border-indigo-400 pl-4 bg-indigo-50/50 rounded-lg py-1">Elige una Plantilla</h2>
               <SelectorPlantillaCV 
                 plantillaSeleccionada={plantillaSeleccionada}
                 onSeleccionarPlantilla={handleSeleccionarPlantilla}
@@ -742,7 +532,8 @@ export default function FormularioCVElegante({ onSubmit, cargando = false }) {
             </div>
             
             {/* Secciones Opcionales */}
-            <div className="mt-8">
+            <div className="mt-12">
+              <h2 className="text-xl font-bold text-slate-700 mb-4 border-l-4 border-amber-400 pl-4 bg-amber-50/50 rounded-lg py-1">Secciones Opcionales</h2>
               <SeccionesOpcionalesCV 
                 seccionesActivas={seccionesActivas}
                 onToggleSeccion={handleToggleSeccion}
@@ -753,7 +544,8 @@ export default function FormularioCVElegante({ onSubmit, cargando = false }) {
             
             {/* Generador de PDF Avanzado */}
             {formularioValido && (
-              <div className="mt-8">
+              <div className="mt-12">
+                <h2 className="text-xl font-bold text-slate-700 mb-4 border-l-4 border-emerald-400 pl-4 bg-emerald-50/50 rounded-lg py-1">Generar PDF Profesional</h2>
                 <GeneradorPDFAvanzado 
                   datos={datos}
                   plantilla={plantillaSeleccionada}
