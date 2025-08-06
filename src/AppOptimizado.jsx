@@ -121,7 +121,7 @@ function AppOptimizado() {
 
         {cv && (
           <div className="mt-12 space-y-8">
-            <VistaPreviaCVOptimizada cv={cv} />
+            <VistaPreviaCVOptimizada cv={cv} datos={datos} />
             <BotonDescargarPDFOptimizado cv={cv} datos={datos} />
           </div>
         )}

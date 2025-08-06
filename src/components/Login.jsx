@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import api from '../config/axios';
 import { handleLaravelError } from '../config/laravel';
 
@@ -19,11 +19,12 @@ function Login({ onLogin }) {
   const [cargando, setCargando] = useState(false);
   const [mostrarPassword, setMostrarPassword] = useState(false);
 
-  const handleChange = e => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setForm(prevForm => ({ ...prevForm, [name]: value }));
+  }, []);
 
-  const handleSubmit = async e => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     setCargando(true);
     setError('');
@@ -46,7 +47,7 @@ function Login({ onLogin }) {
     } finally {
       setCargando(false);
     }
-  };
+  }, [form, esRegistro, onLogin]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex items-center justify-center p-4 relative overflow-hidden">

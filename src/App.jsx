@@ -102,7 +102,7 @@ function App() {
         
         {cv && (
           <div className="mt-12 space-y-8">
-            <VistaPreviaCV cv={cv} />
+            <VistaPreviaCV cv={cv} datos={datos} />
             <BotonDescargarPDF cv={cv} datos={datos} />
           </div>
         )}

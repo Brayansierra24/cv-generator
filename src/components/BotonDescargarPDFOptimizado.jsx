@@ -7,50 +7,133 @@ const BotonDescargarPDFOptimizado = memo(function BotonDescargarPDFOptimizado({ 
     try {
       const doc = new jsPDF();
       
-      // Configurar fuente y tamaño
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text('CURRÍCULUM VITAE', 105, 20, { align: 'center' });
+      // Colores del tema
+      const primaryColor = [67, 56, 202]; // Indigo
+      const secondaryColor = [99, 102, 241]; // Blue
+      const accentColor = [16, 185, 129]; // Emerald
+      const textColor = [31, 41, 55]; // Gray-800
+      const lightGray = [243, 244, 246]; // Gray-100
       
-      // Información personal
-      doc.setFontSize(12);
+      // === HEADER SECTION ===
+      // Fondo del header
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(0, 0, 210, 45, 'F');
+      
+      // Nombre principal
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      doc.text('INFORMACIÓN PERSONAL', 20, 40);
+      doc.text(datos?.nombre || 'NOMBRE COMPLETO', 105, 20, { align: 'center' });
+      
+      // Cargo deseado
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Nombre: ${datos?.nombre || 'N/A'}`, 20, 50);
+      doc.text(datos?.cargo_deseado || 'Cargo Profesional', 105, 30, { align: 'center' });
       
-      // Experiencia
+      // Línea decorativa
+      doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
+      doc.setLineWidth(2);
+      doc.line(60, 35, 150, 35);
+      
+      // === LAYOUT DE DOS COLUMNAS ===
+      let leftY = 60;
+      let rightY = 60;
+      const leftX = 20;
+      const rightX = 115;
+      const columnWidth = 80;
+      
+      // Función para crear secciones con estilo
+      const createSection = (title, content, x, y, isLeft = true) => {
+        // Título de la sección
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(title.toUpperCase(), x, y);
+        
+        // Línea bajo el título
+        doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
+        doc.setLineWidth(1);
+        doc.line(x, y + 2, x + (isLeft ? 85 : 75), y + 2);
+        
+        // Contenido
+        doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        const lines = doc.splitTextToSize(content || 'No especificado', columnWidth);
+        doc.text(lines, x, y + 8);
+        
+        return y + 8 + (lines.length * 4) + 12;
+      };
+      
+      // === COLUMNA IZQUIERDA ===
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      doc.text('EXPERIENCIA LABORAL', 20, 70);
+      doc.text('INFORMACIÓN PERSONAL', leftX, 55);
+      
+      // Información personal con iconos
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      const experienciaLines = doc.splitTextToSize(datos?.experiencia || 'N/A', 170);
-      doc.text(experienciaLines, 20, 80);
       
-      // Calcular posición Y dinámica basada en el contenido anterior
-      let currentY = 80 + (experienciaLines.length * 5) + 20;
-      
-      // Educación
-      doc.setFont('helvetica', 'bold');
-      doc.text('EDUCACIÓN', 20, currentY);
-      doc.setFont('helvetica', 'normal');
-      const educacionLines = doc.splitTextToSize(datos?.educacion || 'N/A', 170);
-      doc.text(educacionLines, 20, currentY + 10);
-      
-      // Actualizar posición Y
-      currentY += 10 + (educacionLines.length * 5) + 20;
-      
-      // Verificar si necesitamos una nueva página
-      if (currentY > 250) {
-        doc.addPage();
-        currentY = 20;
+      if (datos?.email) {
+        doc.text('✉ Email:', leftX, leftY);
+        doc.text(datos.email, leftX + 15, leftY);
+        leftY += 6;
       }
       
+      if (datos?.telefono) {
+        doc.text('📱 Teléfono:', leftX, leftY);
+        doc.text(datos.telefono, leftX + 20, leftY);
+        leftY += 6;
+      }
+      
+      if (datos?.ubicacion) {
+        doc.text('📍 Ubicación:', leftX, leftY);
+        doc.text(datos.ubicacion, leftX + 22, leftY);
+        leftY += 6;
+      }
+      
+      leftY += 10;
+      
       // Habilidades
-      doc.setFont('helvetica', 'bold');
-      doc.text('HABILIDADES', 20, currentY);
-      doc.setFont('helvetica', 'normal');
-      const habilidadesLines = doc.splitTextToSize(datos?.habilidades || 'N/A', 170);
-      doc.text(habilidadesLines, 20, currentY + 10);
+      leftY = createSection('🚀 Habilidades', datos?.habilidades, leftX, leftY, true);
+      
+      // Idiomas
+      if (datos?.idiomas) {
+        leftY = createSection('🌍 Idiomas', datos?.idiomas, leftX, leftY, true);
+      }
+      
+      // === COLUMNA DERECHA ===
+      // Experiencia Laboral
+      rightY = createSection('💼 Experiencia Laboral', datos?.experiencia, rightX, rightY, false);
+      
+      // Educación
+      rightY = createSection('🎓 Educación', datos?.educacion, rightX, rightY, false);
+      
+      // Proyectos (si existe)
+      if (datos?.proyectos) {
+        rightY = createSection('🔧 Proyectos', datos?.proyectos, rightX, rightY, false);
+      }
+      
+      // === FOOTER ===
+      const pageHeight = doc.internal.pageSize.height;
+      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+      doc.rect(0, pageHeight - 20, 210, 20, 'F');
+      
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      doc.text('Currículum generado con IA - ' + new Date().toLocaleDateString(), 105, pageHeight - 10, { align: 'center' });
+      
+      // === ELEMENTOS DECORATIVOS ===
+      // Círculos decorativos
+      doc.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      doc.circle(200, 50, 3, 'F');
+      doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+      doc.circle(195, 55, 2, 'F');
+      doc.circle(205, 45, 1.5, 'F');
       
       // Generar nombre de archivo seguro
       const nombreArchivo = datos?.nombre 
